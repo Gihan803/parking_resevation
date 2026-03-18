@@ -1,0 +1,39 @@
+# Laravel
+backend/vendor/
+backend/.env
+backend/.env.local
+backend/.env.*.local
+backend/storage/logs/
+backend/storage/app/
+backend/bootstrap/cache/
+backend/node_modules/
+backend/dist/
+backend/*.log
+
+# React/Node
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+frontend/.env.local
+frontend/.env.*.local
+frontend/*.log
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+.DS_Store
+*.pem
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Misc
+.env.example
+*.bak
