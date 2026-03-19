@@ -1,90 +1,143 @@
-import React from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 
 export default function Navbar({ user, onLogout }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const handleLogout = () => {
     localStorage.removeItem('auth_token');
     localStorage.removeItem('user');
+    onLogout();
     navigate('/login');
   };
 
-  const isActive = (path) => location.pathname === path;
+  const isActive = (path) => {
+    return location.pathname === path ? 'bg-teal-600' : '';
+  };
+
+  const toggleMenu = () => {
+    setIsMenuOpen(!isMenuOpen);
+  };
+
+  const closeMenu = () => {
+    setIsMenuOpen(false);
+  };
 
   return (
-    <header className="bg-white shadow-sm sticky top-0 z-40">
+    <nav className="bg-teal-500 text-white shadow-lg">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between py-4">
+        <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-emerald-500 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-lg">P</span>
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900">Friendly Parking</h1>
+          <div className="flex items-center">
+            <Link to="/dashboard" className="font-bold text-xl" onClick={closeMenu}>
+              Parking Reservation
+            </Link>
           </div>
 
-          {/* Navigation */}
-          <nav className="hidden md:flex items-center gap-8">
-            <button
-              onClick={() => navigate('/dashboard')}
-              className={`font-semibold pb-2 border-b-2 transition-colors ${
-                isActive('/dashboard')
-                  ? 'text-emerald-500 border-emerald-500'
-                  : 'text-gray-600 border-transparent hover:text-gray-900'
-              }`}
+          {/* Desktop Navigation Links */}
+          <div className="hidden md:flex items-center space-x-4">
+            <Link
+              to="/dashboard"
+              className={`px-3 py-2 rounded-md text-sm font-medium hover:bg-teal-600 transition-colors ${isActive('/dashboard')}`}
             >
               Dashboard
-            </button>
-            <button
-              onClick={() => navigate('/my-reservations')}
-              className={`font-semibold pb-2 border-b-2 transition-colors ${
-                isActive('/my-reservations')
-                  ? 'text-emerald-500 border-emerald-500'
-                  : 'text-gray-600 border-transparent hover:text-gray-900'
-              }`}
+            </Link>
+            <Link
+              to="/my-reservations"
+              className={`px-3 py-2 rounded-md text-sm font-medium hover:bg-teal-600 transition-colors ${isActive('/my-reservations')}`}
             >
               My Reservations
-            </button>
-            <button
-              className={`font-semibold pb-2 border-b-2 transition-colors ${
-                isActive('/profile')
-                  ? 'text-emerald-500 border-emerald-500'
-                  : 'text-gray-600 border-transparent hover:text-gray-900'
-              }`}
+            </Link>
+            <Link
+              to="/profile"
+              className={`px-3 py-2 rounded-md text-sm font-medium hover:bg-teal-600 transition-colors ${isActive('/profile')}`}
             >
-              {user?.full_name || 'Profile'}
-            </button>
+              Profile
+            </Link>
+          </div>
+
+          {/* Desktop User Info & Logout */}
+          <div className="hidden md:flex items-center space-x-4">
+            <span className="text-sm">
+              Welcome, {user?.full_name || 'User'}
+            </span>
             <button
               onClick={handleLogout}
-              className="text-gray-600 font-semibold hover:text-red-600 transition-colors"
+              className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
             >
               Logout
             </button>
-          </nav>
+          </div>
 
-          {/* Mobile Navigation */}
-          <nav className="md:hidden flex items-center gap-4">
+          {/* Mobile Menu Button */}
+          <div className="md:hidden">
             <button
-              onClick={() => navigate('/dashboard')}
-              className={`text-sm font-semibold ${
-                isActive('/dashboard') ? 'text-emerald-500' : 'text-gray-600'
-              }`}
+              onClick={toggleMenu}
+              className="p-2 rounded-md hover:bg-teal-600 transition-colors focus:outline-none"
+              aria-label="Toggle menu"
             >
-              Dashboard
+              {isMenuOpen ? (
+                // Close icon
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              ) : (
+                // Hamburger icon
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              )}
             </button>
-            <button
-              onClick={() => navigate('/my-reservations')}
-              className={`text-sm font-semibold ${
-                isActive('/my-reservations') ? 'text-emerald-500' : 'text-gray-600'
-              }`}
-            >
-              Reservations
-            </button>
-          </nav>
+          </div>
         </div>
+
+        {/* Mobile Menu */}
+        {isMenuOpen && (
+          <div className="md:hidden pb-4">
+            {/* Mobile Navigation Links */}
+            <div className="flex flex-col space-y-2">
+              <Link
+                to="/dashboard"
+                onClick={closeMenu}
+                className={`px-3 py-2 rounded-md text-sm font-medium hover:bg-teal-600 transition-colors ${isActive('/dashboard')}`}
+              >
+                Dashboard
+              </Link>
+              <Link
+                to="/my-reservations"
+                onClick={closeMenu}
+                className={`px-3 py-2 rounded-md text-sm font-medium hover:bg-teal-600 transition-colors ${isActive('/my-reservations')}`}
+              >
+                My Reservations
+              </Link>
+              <Link
+                to="/profile"
+                onClick={closeMenu}
+                className={`px-3 py-2 rounded-md text-sm font-medium hover:bg-teal-600 transition-colors ${isActive('/profile')}`}
+              >
+                Profile
+              </Link>
+            </div>
+
+            {/* Mobile User Info & Logout */}
+            <div className="mt-4 pt-4 border-t border-teal-400">
+              <div className="flex flex-col space-y-3">
+                <span className="text-sm px-3">
+                  Welcome, {user?.full_name || 'User'}
+                </span>
+                <button
+                  onClick={handleLogout}
+                  className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors mx-3"
+                >
+                  Logout
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
-    </header>
+    </nav>
   );
 }

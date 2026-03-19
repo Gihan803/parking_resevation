@@ -4,22 +4,27 @@ import ParkingSlot from './ParkingSlot';
 import BookingModal from './BookingModal';
 import Navbar from './Navbar';
 
+// Initialize user synchronously from localStorage
+const getInitialUser = () => {
+  const userData = localStorage.getItem('user');
+  return userData ? JSON.parse(userData) : null;
+};
+
 export default function Dashboard() {
   const [slots, setSlots] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(getInitialUser);
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Get user data from localStorage
+    // Reload user data from localStorage on mount (in case it was updated)
     const userData = localStorage.getItem('user');
     if (userData) {
       setUser(JSON.parse(userData));
     }
-
     // Load slots on mount only
     fetchSlots();
   }, []);

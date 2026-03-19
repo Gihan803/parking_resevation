@@ -4,6 +4,7 @@ import Login from './Login';
 import Register from './Register';
 import Dashboard from './components/Dashboard';
 import MyReservations from './components/MyReservations';
+import ProfileEdit from './components/ProfileEdit';
 import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
 
@@ -20,11 +21,19 @@ function App() {
           </ProtectedRoute>
         }
       />
-      <Route
+<Route
         path="/my-reservations"
         element={
           <ProtectedRoute>
             <MyReservations />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <ProfileEdit />
           </ProtectedRoute>
         }
       />

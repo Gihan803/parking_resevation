@@ -65,28 +65,69 @@ class AuthController extends Controller
             'user' => $user,
             'access_token' => $token,
             'token_type' => 'Bearer',
-        ], 200);
+        ]);
     }
 
     /**
-     * Get current authenticated user
-     */
-    public function me(Request $request)
-    {
-        return response()->json([
-            'user' => $request->user(),
-        ], 200);
-    }
-
-    /**
-     * Logout user
+     * Logout user (revoke token)
      */
     public function logout(Request $request)
     {
         $request->user()->currentAccessToken()->delete();
 
         return response()->json([
-            'message' => 'Logout successful',
-        ], 200);
+            'message' => 'Logged out successfully',
+        ]);
+    }
+
+    /**
+     * Get authenticated user
+     */
+    public function me(Request $request)
+    {
+        return response()->json([
+            'user' => $request->user(),
+        ]);
+    }
+
+    /**
+     * Update user profile
+     */
+    public function updateProfile(Request $request)
+    {
+        $user = $request->user();
+
+        $request->validate([
+            'full_name' => 'sometimes|string|max:255',
+            'phone' => 'sometimes|string|max:20',
+            'current_password' => 'required_with:new_password|string',
+            'new_password' => 'sometimes|string|min:6|same:confirm_password',
+        ]);
+
+        // Update basic info
+        if ($request->has('full_name')) {
+            $user->full_name = $request->full_name;
+        }
+
+        if ($request->has('phone')) {
+            $user->phone = $request->phone;
+        }
+
+        // Update password if provided
+        if ($request->has('new_password')) {
+            if (!Hash::check($request->current_password, $user->password)) {
+                throw ValidationException::withMessages([
+                    'current_password' => ['The current password is incorrect.'],
+                ]);
+            }
+            $user->password = Hash::make($request->new_password);
+        }
+
+        $user->save();
+
+        return response()->json([
+            'message' => 'Profile updated successfully',
+            'user' => $user,
+        ]);
     }
 }
