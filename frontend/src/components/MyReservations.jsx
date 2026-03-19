@@ -1,14 +1,18 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Notification from './Notification';
 import ConfirmModal from './ConfirmModal';
 import ExpirationWarning from './ExpirationWarning';
+import Navbar from './Navbar';
 
-export default function MyReservations({ onBack }) {
+export default function MyReservations() {
   const [reservations, setReservations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [user, setUser] = useState(null);
   const [cancelCountdowns, setCancelCountdowns] = useState({});
   const [notification, setNotification] = useState(null);
+  const navigate = useNavigate();
   const [confirmModal, setConfirmModal] = useState({
     isOpen: false,
     type: null, // 'cancel' or 'delete'
@@ -25,6 +29,11 @@ export default function MyReservations({ onBack }) {
   const [dismissedWarnings, setDismissedWarnings] = useState(new Set()); // Track dismissed warnings
 
   useEffect(() => {
+    // Get user data from localStorage
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      setUser(JSON.parse(userData));
+    }
     // Load reservations on mount only (no automatic polling)
     fetchReservations();
   }, []);
@@ -284,7 +293,13 @@ export default function MyReservations({ onBack }) {
   };
 
   const handleBackToDashboard = () => {
-    onBack();
+    navigate('/dashboard');
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('user');
+    navigate('/login');
   };
 
   const handleCloseModal = () => {
@@ -353,31 +368,8 @@ export default function MyReservations({ onBack }) {
         isLoading={expirationWarning.isLoading}
       />
 
-      {/* Header */}
-      <header className="bg-white shadow-sm sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between py-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-teal-500 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg">P</span>
-              </div>
-              <h1 className="text-2xl font-bold text-gray-900">ParkingApp</h1>
-            </div>
-
-            <nav className="flex items-center gap-6">
-              <button
-                onClick={handleBackToDashboard}
-                className="text-gray-600 font-semibold hover:text-gray-900"
-              >
-                Dashboard
-              </button>
-              <button className="text-teal-500 font-semibold border-b-2 border-teal-500">
-                My Reservations
-              </button>
-            </nav>
-          </div>
-        </div>
-      </header>
+      {/* Navbar */}
+      <Navbar user={user} onLogout={handleLogout} />
 
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">

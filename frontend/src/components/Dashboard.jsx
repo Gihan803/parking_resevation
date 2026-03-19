@@ -2,13 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ParkingSlot from './ParkingSlot';
 import BookingModal from './BookingModal';
-import MyReservations from './MyReservations';
+import Navbar from './Navbar';
 
 export default function Dashboard() {
   const [slots, setSlots] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState('dashboard');
   const [user, setUser] = useState(null);
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [showBookingModal, setShowBookingModal] = useState(false);
@@ -85,11 +84,6 @@ export default function Dashboard() {
     navigate('/login');
   };
 
-  // Show My Reservations page
-  if (activeTab === 'reservations') {
-    return <MyReservations onBack={() => setActiveTab('dashboard')} />;
-  }
-
   const availableCount = slots.filter(s => s.status === 'available').length;
   const occupiedCount = slots.length - availableCount;
 
@@ -106,60 +100,8 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between py-4">
-            {/* Logo */}
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-emerald-500 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg">P</span>
-              </div>
-              <h1 className="text-2xl font-bold text-gray-900">Friendly Parking</h1>
-            </div>
-
-            {/* Navigation */}
-            <nav className="hidden md:flex items-center gap-8">
-              <button
-                onClick={() => setActiveTab('dashboard')}
-                className={`font-semibold pb-2 border-b-2 transition-colors ${
-                  activeTab === 'dashboard'
-                    ? 'text-emerald-500 border-emerald-500'
-                    : 'text-gray-600 border-transparent hover:text-gray-900'
-                }`}
-              >
-                Dashboard
-              </button>
-              <button
-                onClick={() => setActiveTab('reservations')}
-                className={`font-semibold pb-2 border-b-2 transition-colors ${
-                  activeTab === 'reservations'
-                    ? 'text-emerald-500 border-emerald-500'
-                    : 'text-gray-600 border-transparent hover:text-gray-900'
-                }`}
-              >
-                My Reservations
-              </button>
-              <button
-                onClick={() => setActiveTab('profile')}
-                className={`font-semibold pb-2 border-b-2 transition-colors ${
-                  activeTab === 'profile'
-                    ? 'text-emerald-500 border-emerald-500'
-                    : 'text-gray-600 border-transparent hover:text-gray-900'
-                }`}
-              >
-                {user?.full_name || 'Profile'}
-              </button>
-              <button
-                onClick={handleLogout}
-                className="text-gray-600 font-semibold hover:text-red-600 transition-colors"
-              >
-                Logout
-              </button>
-            </nav>
-          </div>
-        </div>
-      </header>
+      {/* Navbar */}
+      <Navbar user={user} onLogout={handleLogout} />
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
