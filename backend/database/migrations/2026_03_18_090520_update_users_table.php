@@ -12,12 +12,16 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            // Rename name to full_name
-            $table->renameColumn('name', 'full_name');
-            // Add phone column
-            $table->string('phone')->nullable()->after('full_name');
-            // Add role column
-            $table->enum('role', ['customer', 'admin'])->default('customer')->after('password');
+            // Add full_name, phone, and role if they don't exist
+            if (!Schema::hasColumn('users', 'full_name')) {
+                $table->string('full_name')->nullable()->after('email');
+            }
+            if (!Schema::hasColumn('users', 'phone')) {
+                $table->string('phone')->nullable()->after('full_name');
+            }
+            if (!Schema::hasColumn('users', 'role')) {
+                $table->enum('role', ['customer', 'admin'])->default('customer')->after('password');
+            }
         });
     }
 

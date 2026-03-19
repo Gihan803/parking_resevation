@@ -46,6 +46,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/', [ReservationController::class, 'store']);
         Route::get('/{id}', [ReservationController::class, 'show']);
         Route::post('/{id}/cancel', [ReservationController::class, 'cancel']);
+        Route::post('/{id}/extend', [ReservationController::class, 'extend']);
+        Route::delete('/{id}', [ReservationController::class, 'destroy']);
     });
 
     // Admin Routes

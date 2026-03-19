@@ -16,9 +16,18 @@ class ReservationController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
+
+        // Auto-complete any expired reservations before fetching
+        $activeReservations = Reservation::where('user_id', $user->id)
+            ->where('status', 'active')
+            ->get();
         
+        foreach ($activeReservations as $reservation) {
+            $reservation->completeIfExpired();
+        }
+
         $reservations = Reservation::where('user_id', $user->id)
-            ->with('slots:id,slot_number,status')
+            ->with('slots')
             ->get()
             ->map(function ($reservation) {
                 return [
@@ -28,7 +37,16 @@ class ReservationController extends Controller
                     'start_time' => $reservation->start_time,
                     'end_time' => $reservation->end_time,
                     'status' => $reservation->status,
-                    'slots' => $reservation->slots,
+                    'can_cancel' => $reservation->canBeCancelled(),
+                    'is_about_to_expire' => $reservation->isAboutToExpire(),
+                    'minutes_until_expiry' => $reservation->getMinutesUntilExpiry(),
+                    'slots' => $reservation->slots->map(function ($slot) {
+                        return [
+                            'id' => $slot->id,
+                            'slot_number' => $slot->slot_number,
+                            'status' => $slot->status,
+                        ];
+                    }),
                     'created_at' => $reservation->created_at,
                 ];
             });
@@ -46,33 +64,39 @@ class ReservationController extends Controller
     {
         $user = $request->user();
 
-        $request->validate([
-            'vehicle_plate' => 'required|string|max:20',
-            'booking_date' => 'required|date|after_or_equal:today',
-            'start_time' => 'required|date_format:H:i',
-            'end_time' => 'required|date_format:H:i|after:start_time',
-            'slot_ids' => 'required|array|min:1',
-            'slot_ids.*' => 'required|integer|exists:parking_slots,id',
-        ]);
-
-        // Verify all slots are available
-        $slots = ParkingSlot::whereIn('id', $request->slot_ids)->get();
-
-        foreach ($slots as $slot) {
-            if ($slot->status !== 'available') {
-                return response()->json([
-                    'message' => 'Slot ' . $slot->slot_number . ' is not available',
-                ], 400);
-            }
-        }
-
         try {
+            $request->validate([
+                'vehicle_plate' => 'required|string|max:20',
+                'booking_date' => 'required|string',
+                'start_time' => 'required|string',
+                'end_time' => 'required|string',
+                'slot_ids' => 'required|array|min:1',
+                'slot_ids.*' => 'required|integer|exists:parking_slots,id',
+            ]);
+
+            // Verify all slots are available
+            $slots = ParkingSlot::whereIn('id', $request->slot_ids)->get();
+
+            if ($slots->count() === 0) {
+                return response()->json([
+                    'message' => 'No slots found',
+                ], 404);
+            }
+
+            foreach ($slots as $slot) {
+                if ($slot->status !== 'available') {
+                    return response()->json([
+                        'message' => 'Slot ' . $slot->slot_number . ' is not available',
+                    ], 400);
+                }
+            }
+
             DB::beginTransaction();
 
             // Create reservation
             $reservation = Reservation::create([
                 'user_id' => $user->id,
-                'vehicle_plate' => $request->vehicle_plate,
+                'vehicle_plate' => strtoupper($request->vehicle_plate),
                 'booking_date' => $request->booking_date,
                 'start_time' => $request->start_time,
                 'end_time' => $request->end_time,
@@ -96,13 +120,21 @@ class ReservationController extends Controller
                     'start_time' => $reservation->start_time,
                     'end_time' => $reservation->end_time,
                     'status' => $reservation->status,
-                    'slots' => $reservation->slots()->get(['id', 'slot_number', 'status']),
+                    'slots' => $reservation->slots->map(function ($slot) {
+                        return [
+                            'id' => $slot->id,
+                            'slot_number' => $slot->slot_number,
+                            'status' => $slot->status,
+                        ];
+                    }),
                 ],
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
+            \Log::error('Reservation creation error: ' . $e->getMessage() . ' ' . $e->getFile() . ':' . $e->getLine());
             return response()->json([
                 'message' => 'Error creating reservation: ' . $e->getMessage(),
+                'error' => config('app.debug') ? $e->getTrace() : null,
             ], 500);
         }
     }
@@ -113,7 +145,7 @@ class ReservationController extends Controller
     public function show($id, Request $request)
     {
         $user = $request->user();
-        $reservation = Reservation::find($id);
+        $reservation = Reservation::with('slots')->find($id);
 
         if (!$reservation) {
             return response()->json([
@@ -136,7 +168,13 @@ class ReservationController extends Controller
                 'start_time' => $reservation->start_time,
                 'end_time' => $reservation->end_time,
                 'status' => $reservation->status,
-                'slots' => $reservation->slots()->get(['id', 'slot_number', 'status']),
+                'slots' => $reservation->slots->map(function ($slot) {
+                    return [
+                        'id' => $slot->id,
+                        'slot_number' => $slot->slot_number,
+                        'status' => $slot->status,
+                    ];
+                }),
                 'created_at' => $reservation->created_at,
             ],
         ], 200);
@@ -169,6 +207,21 @@ class ReservationController extends Controller
             ], 400);
         }
 
+        if ($reservation->status === 'completed') {
+            return response()->json([
+                'message' => 'Cannot cancel a completed reservation',
+            ], 400);
+        }
+
+        // Check if reservation can still be cancelled (1 minute window)
+        if (!$reservation->canBeCancelled() && $user->role !== 'admin') {
+            $minutesPassed = $reservation->created_at->diffInMinutes(now());
+            return response()->json([
+                'message' => 'Cancellation window expired. You can only cancel within 1 minute of booking.',
+                'minutes_passed' => $minutesPassed,
+            ], 400);
+        }
+
         try {
             DB::beginTransaction();
             $reservation->cancel();
@@ -179,6 +232,7 @@ class ReservationController extends Controller
                 'reservation' => [
                     'id' => $reservation->id,
                     'status' => $reservation->status,
+                    'cancelled_at' => $reservation->cancelled_at,
                 ],
             ], 200);
         } catch (\Exception $e) {
@@ -190,18 +244,82 @@ class ReservationController extends Controller
     }
 
     /**
-     * Delete a reservation (admin only)
+     * Extend reservation time by 30 minutes
+     */
+    public function extend($id, Request $request)
+    {
+        $user = $request->user();
+        $reservation = Reservation::with('slots')->find($id);
+
+        if (!$reservation) {
+            return response()->json([
+                'message' => 'Reservation not found',
+            ], 404);
+        }
+
+        // Check if user owns the reservation
+        if ($reservation->user_id !== $user->id) {
+            return response()->json([
+                'message' => 'Unauthorized',
+            ], 403);
+        }
+
+        if ($reservation->status !== 'active') {
+            return response()->json([
+                'message' => 'Can only extend active reservations',
+            ], 400);
+        }
+
+        if ($reservation->hasExpired()) {
+            return response()->json([
+                'message' => 'Cannot extend an expired reservation',
+            ], 400);
+        }
+
+        try {
+            $success = $reservation->extendTime(30);
+
+            if (!$success) {
+                return response()->json([
+                    'message' => 'Failed to extend reservation',
+                ], 500);
+            }
+
+            // Refresh the reservation to get updated end_time
+            $reservation->refresh();
+
+            return response()->json([
+                'message' => 'Reservation extended by 30 minutes',
+                'reservation' => [
+                    'id' => $reservation->id,
+                    'vehicle_plate' => $reservation->vehicle_plate,
+                    'booking_date' => $reservation->booking_date,
+                    'start_time' => $reservation->start_time,
+                    'end_time' => $reservation->end_time,
+                    'status' => $reservation->status,
+                    'slots' => $reservation->slots->map(function ($slot) {
+                        return [
+                            'id' => $slot->id,
+                            'slot_number' => $slot->slot_number,
+                            'status' => $slot->status,
+                        ];
+                    }),
+                ],
+            ], 200);
+        } catch (\Exception $e) {
+            \Log::error('Error extending reservation: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'Error extending reservation: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Delete a reservation (users can delete their own cancelled/completed, admins can delete any)
      */
     public function destroy($id, Request $request)
     {
         $user = $request->user();
-
-        if ($user->role !== 'admin') {
-            return response()->json([
-                'message' => 'Unauthorized - Admin only',
-            ], 403);
-        }
-
         $reservation = Reservation::find($id);
 
         if (!$reservation) {
@@ -210,9 +328,31 @@ class ReservationController extends Controller
             ], 404);
         }
 
+        // Check if user owns the reservation or is admin
+        if ($reservation->user_id !== $user->id && $user->role !== 'admin') {
+            return response()->json([
+                'message' => 'Unauthorized',
+            ], 403);
+        }
+
+        // Debug logging
+        \Log::info('Delete reservation attempt', [
+            'reservation_id' => $reservation->id,
+            'status' => $reservation->status,
+            'booking_date' => $reservation->booking_date,
+            'end_time' => $reservation->end_time,
+            'has_expired_check' => $reservation->hasExpired(),
+        ]);
+
+        // Users can only delete cancelled or completed reservations
+        if ($user->role !== 'admin' && !in_array($reservation->status, ['cancelled', 'completed'])) {
+            return response()->json([
+                'message' => 'You can only delete cancelled or completed reservations. Current status: ' . $reservation->status,
+            ], 400);
+        }
+
         try {
             DB::beginTransaction();
-            $reservation->cancel();
             $reservation->delete();
             DB::commit();
 
