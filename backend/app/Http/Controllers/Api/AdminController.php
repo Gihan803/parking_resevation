@@ -46,20 +46,25 @@ class AdminController extends Controller
 
                     $startDateTime = Carbon::parse($bookingDate . ' ' . $res->start_time);
                     $endDateTime = Carbon::parse($bookingDate . ' ' . $res->end_time);
+                    if ($endDateTime->lte($startDateTime)) {
+                        $endDateTime->addDay();
+                    }
 
-                    $plannedMinutes = max(0, $startDateTime->diffInMinutes($endDateTime, false));
+                    $plannedMinutes = max(0, $startDateTime->diffInMinutes($endDateTime));
                     $plannedHours = intdiv($plannedMinutes, 60);
                     $plannedMins = $plannedMinutes % 60;
                     $plannedDuration = $plannedHours > 0
                         ? "{$plannedHours}h {$plannedMins}m"
                         : "{$plannedMins}m";
 
-                    $elapsedMinutes = max(0, $startDateTime->diffInMinutes(now(), false));
+                    $now = now();
+                    $hasStarted = $now->gte($startDateTime);
+                    $elapsedMinutes = $hasStarted ? max(0, $startDateTime->diffInMinutes($now)) : 0;
                     $elapsedHours = intdiv($elapsedMinutes, 60);
                     $elapsedMins = $elapsedMinutes % 60;
-                    $elapsedDuration = $elapsedHours > 0
+                    $elapsedDuration = $hasStarted && $elapsedMinutes > 0
                         ? "{$elapsedHours}h {$elapsedMins}m"
-                        : "{$elapsedMins}m";
+                        : ($hasStarted ? "{$elapsedMins}m" : null);
 
                     $activeReservation = [
                         'id' => $res->id,
@@ -69,6 +74,8 @@ class AdminController extends Controller
                         'vehicle_plate' => $res->vehicle_plate,
                         'planned_duration' => $plannedDuration,
                         'elapsed_duration' => $elapsedDuration,
+                        'has_started' => $hasStarted,
+                        'since_time' => $startDateTime->format('H:i'),
                         'occupant' => $user ? [
                             'id' => $user->id,
                             'full_name' => $user->full_name,

@@ -40,29 +40,30 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  const load = async (opts = { silent: false }) => {
+    try {
+      if (!opts.silent) setLoading(true);
+      setError('');
+      const [slotRes, userRes] = await Promise.all([adminApi.getSlots(), adminApi.getUsers()]);
+      setSlots(slotRes.slots || []);
+      setUsers(userRes.users || []);
+    } catch (e) {
+      setError(e?.message || 'Failed to load admin dashboard');
+    } finally {
+      if (!opts.silent) setLoading(false);
+    }
+  };
+
   useEffect(() => {
     let mounted = true;
-
-    async function load() {
-      try {
-        setLoading(true);
-        setError('');
-        const [slotRes, userRes] = await Promise.all([adminApi.getSlots(), adminApi.getUsers()]);
-        if (!mounted) return;
-        setSlots(slotRes.slots || []);
-        setUsers(userRes.users || []);
-      } catch (e) {
-        if (!mounted) return;
-        setError(e?.message || 'Failed to load admin dashboard');
-      } finally {
-        if (!mounted) return;
-        setLoading(false);
-      }
-    }
-
     load();
+    const interval = setInterval(() => {
+      if (!mounted) return;
+      load({ silent: true });
+    }, 15000);
     return () => {
       mounted = false;
+      clearInterval(interval);
     };
   }, []);
 
@@ -76,12 +77,21 @@ export default function AdminDashboard() {
           <h1 className="text-4xl font-black text-slate-900">Parking Inventory</h1>
           <p className="mt-2 text-slate-500">Detailed view of parking capacity and active occupants.</p>
         </div>
-        <Link
-          to="/admin/inventory"
-          className="inline-flex items-center gap-2 rounded-full bg-teal-600 px-5 py-3 text-white font-bold shadow-sm hover:bg-teal-700"
-        >
-          <span className="text-xl leading-none">+</span> Add / Manage Slots
-        </Link>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => load()}
+            className="rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50"
+          >
+            Refresh
+          </button>
+          <Link
+            to="/admin/inventory"
+            className="inline-flex items-center gap-2 rounded-full bg-teal-600 px-5 py-3 text-white font-bold shadow-sm hover:bg-teal-700"
+          >
+            <span className="text-xl leading-none">+</span> Add / Manage Slots
+          </Link>
+        </div>
       </div>
 
       {error ? (
@@ -146,9 +156,13 @@ export default function AdminDashboard() {
                       <td className="py-4 pr-4">
                         {res ? (
                           <div className="space-y-1">
-                            <div className="font-bold text-slate-900">{res.elapsed_duration || res.planned_duration}</div>
+                            <div className="font-bold text-slate-900">
+                              {res.has_started ? (res.elapsed_duration || res.planned_duration) : res.planned_duration}
+                            </div>
                             <div className="text-xs text-slate-500">
-                              Since {res.start_time ? String(res.start_time).slice(0, 5) : '—'}
+                              {res.has_started
+                                ? `Since ${res.since_time || String(res.start_time || '').slice(0, 5)}`
+                                : `Starts ${res.since_time || String(res.start_time || '').slice(0, 5)}`}
                             </div>
                           </div>
                         ) : (

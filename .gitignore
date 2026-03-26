@@ -37,3 +37,5 @@ Thumbs.db
 # Misc
 .env.example
 *.bak
+config.bat
+node_modules
