@@ -22,7 +22,9 @@ export default function InventoryManagement() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 
+  const [isAddOpen, setIsAddOpen] = useState(false);
   const [newSlotNumber, setNewSlotNumber] = useState('');
+  const [addError, setAddError] = useState('');
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
 
@@ -43,20 +45,32 @@ export default function InventoryManagement() {
     fetchSlots();
   }, []);
 
-  const handleAdd = async (e) => {
-    e.preventDefault();
+  const handleOpenAdd = () => {
+    setAddError('');
+    setNewSlotNumber('');
+    setIsAddOpen(true);
+  };
+
+  const handleAddConfirm = async (e) => {
+    if (e) e.preventDefault();
     setNotice('');
     setError('');
-    if (!newSlotNumber.trim()) return;
+    setAddError('');
+    const slotLabel = newSlotNumber.trim().toUpperCase();
+    if (!slotLabel) {
+      setAddError('Slot number is required.');
+      return;
+    }
 
     try {
       setSaving(true);
-      await adminApi.createSlot(newSlotNumber.trim());
+      await adminApi.createSlot(slotLabel);
       setNewSlotNumber('');
       setNotice('Slot created successfully.');
+      setIsAddOpen(false);
       await fetchSlots();
     } catch (e2) {
-      setError(e2?.message || 'Failed to create slot');
+      setAddError(e2?.message || 'Failed to create slot');
     } finally {
       setSaving(false);
     }
@@ -86,21 +100,13 @@ export default function InventoryManagement() {
           <h1 className="text-4xl font-black text-slate-900">Inventory Management</h1>
           <p className="mt-2 text-slate-500">Create, view, and remove parking slots.</p>
         </div>
-        <form onSubmit={handleAdd} className="flex items-center gap-3">
-          <input
-            value={newSlotNumber}
-            onChange={(e) => setNewSlotNumber(e.target.value)}
-            placeholder="Slot number (e.g., A1)"
-            className="w-48 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-200"
-          />
-          <button
-            type="submit"
-            disabled={saving}
-            className="inline-flex items-center gap-2 rounded-full bg-teal-600 px-5 py-3 text-white font-bold shadow-sm hover:bg-teal-700 disabled:opacity-60"
-          >
-            <span className="text-xl leading-none">+</span> Add New Slot
-          </button>
-        </form>
+        <button
+          type="button"
+          onClick={handleOpenAdd}
+          className="inline-flex items-center gap-2 rounded-full bg-teal-600 px-5 py-3 text-white font-bold shadow-sm hover:bg-teal-700"
+        >
+          <span className="text-xl leading-none">+</span> Add New Slot
+        </button>
       </div>
 
       {error ? <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-700">{error}</div> : null}
@@ -188,7 +194,51 @@ export default function InventoryManagement() {
           </table>
         </div>
       </div>
+
+      {isAddOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-slate-900/30" onClick={() => setIsAddOpen(false)} />
+          <div className="relative w-full max-w-md rounded-2xl bg-white shadow-xl border border-slate-100">
+            <div className="p-6 border-b border-slate-100">
+              <h2 className="text-xl font-extrabold text-slate-900">Add New Slot</h2>
+              <p className="mt-1 text-sm text-slate-500">Enter a slot ID like A1, B2, or C3.</p>
+            </div>
+            <form onSubmit={handleAddConfirm} className="p-6 space-y-4">
+              {addError ? (
+                <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-rose-700">{addError}</div>
+              ) : null}
+              <div>
+                <label className="block text-sm font-bold text-slate-700">Slot number</label>
+                <input
+                  value={newSlotNumber}
+                  onChange={(e) => setNewSlotNumber(e.target.value)}
+                  placeholder="A1"
+                  className="mt-1 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-200"
+                  disabled={saving}
+                  autoFocus
+                />
+              </div>
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddOpen(false)}
+                  className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50"
+                  disabled={saving}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="rounded-xl bg-teal-600 px-5 py-3 text-sm font-bold text-white hover:bg-teal-700 disabled:opacity-60"
+                >
+                  {saving ? 'Adding...' : 'Confirm'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
-

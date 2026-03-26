@@ -108,12 +108,15 @@ class AdminController extends Controller
             ], 403);
         }
 
+        $slotNumber = strtoupper(trim((string) $request->slot_number));
+        $request->merge(['slot_number' => $slotNumber]);
+
         $request->validate([
             'slot_number' => 'required|string|max:10|unique:parking_slots',
         ]);
 
         $slot = ParkingSlot::create([
-            'slot_number' => $request->slot_number,
+            'slot_number' => $slotNumber,
             'status' => 'available',
         ]);
 
@@ -140,6 +143,11 @@ class AdminController extends Controller
             return response()->json([
                 'message' => 'Slot not found',
             ], 404);
+        }
+
+        if ($request->has('slot_number')) {
+            $slotNumber = strtoupper(trim((string) $request->slot_number));
+            $request->merge(['slot_number' => $slotNumber]);
         }
 
         $request->validate([
