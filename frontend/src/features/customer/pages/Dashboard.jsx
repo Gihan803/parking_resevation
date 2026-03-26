@@ -1,0 +1,189 @@
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import ParkingSlot from '../../slots/components/ParkingSlot';
+import BookingModal from '../../slots/components/BookingModal';
+import Navbar from '../../../shared/components/Navbar';
+import { parkingSlotApi } from '../../../shared/api';
+
+// Initialize user synchronously from localStorage
+const getInitialUser = () => {
+  const userData = localStorage.getItem('user');
+  return userData ? JSON.parse(userData) : null;
+};
+
+export default function Dashboard() {
+  const [slots, setSlots] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [user, setUser] = useState(getInitialUser);
+  const [selectedSlot, setSelectedSlot] = useState(null);
+  const [showBookingModal, setShowBookingModal] = useState(false);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Reload user data from localStorage on mount (in case it was updated)
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      setUser(JSON.parse(userData));
+    }
+    // Load slots on mount only
+    fetchSlots();
+  }, []);
+
+  const fetchSlots = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const slotData = await parkingSlotApi.fetchAll();
+      
+      // Use real data from backend, fallback to mock if needed
+      if (Array.isArray(slotData) && slotData.length > 0) {
+        setSlots(slotData);
+      } else {
+        setSlots(
+          Array.from({ length: 18 }, (_, i) => ({
+            id: i + 1,
+            slot_number: String(i + 1).padStart(2, '0'),
+            status: i % 3 === 0 ? 'occupied' : 'available',
+          })),
+        );
+      }
+    } catch (err) {
+      console.error('Error fetching slots:', err);
+      setError(err?.message || 'Failed to load slots');
+      // Fallback to mock data on error
+      const mockSlots = Array.from({ length: 18 }, (_, i) => ({
+        id: i + 1,
+        slot_number: String(i + 1).padStart(2, '0'),
+        status: i % 3 === 0 ? 'occupied' : 'available',
+      }));
+      setSlots(mockSlots);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSlotSelect = (slot) => {
+    setSelectedSlot(slot);
+    setShowBookingModal(true);
+  };
+
+  const handleBookingConfirm = (reservation) => {
+    // Immediately refresh slots to show the booked slot as occupied
+    fetchSlots();
+    // Send user to reservations after a short delay
+    setTimeout(() => {
+      navigate('/my-reservations');
+    }, 500);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('user');
+    navigate('/login');
+  };
+
+  const availableCount = slots.filter(s => s.status === 'available').length;
+  const occupiedCount = slots.length - availableCount;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-emerald-500"></div>
+          <p className="mt-4 text-gray-600">Loading parking slots...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Navbar */}
+      <Navbar user={user} onLogout={handleLogout} />
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Statistics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+            <div className="text-gray-600 text-sm font-semibold uppercase tracking-wide">
+              Total Slots
+            </div>
+            <div className="text-4xl font-bold text-gray-900 mt-2">{slots.length}</div>
+          </div>
+          <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+            <div className="text-emerald-600 text-sm font-semibold uppercase tracking-wide">
+              Available
+            </div>
+            <div className="text-4xl font-bold text-emerald-600 mt-2">{availableCount}</div>
+          </div>
+          <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+            <div className="text-red-600 text-sm font-semibold uppercase tracking-wide">
+              Occupied
+            </div>
+            <div className="text-4xl font-bold text-red-600 mt-2">{occupiedCount}</div>
+          </div>
+        </div>
+
+        {/* Parking Slots Section */}
+        <div className="bg-white rounded-lg shadow-lg p-8">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-2xl font-bold text-gray-900">Select a Parking Spot</h2>
+            <button
+              onClick={() => fetchSlots()}
+              disabled={loading}
+              className="text-emerald-600 hover:text-emerald-700 font-semibold text-sm disabled:text-gray-400"
+            >
+              🔄 Refresh
+            </button>
+          </div>
+          <p className="text-gray-600 mb-6">
+            Choose an available space for your vehicle. Green slots are open, red slots are taken.
+          </p>
+
+          {/* Legend */}
+          <div className="flex gap-6 mb-8">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-emerald-400 rounded"></div>
+              <span className="text-gray-700 font-medium">Available</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-red-400 rounded"></div>
+              <span className="text-gray-700 font-medium">Occupied</span>
+            </div>
+          </div>
+
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+              {error}
+            </div>
+          )}
+
+          {/* Parking Slots Grid */}
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
+            {slots.map((slot) => (
+              <ParkingSlot
+                key={slot.id}
+                slot={slot}
+                onSelect={handleSlotSelect}
+              />
+            ))}
+          </div>
+        </div>
+      </main>
+
+      {/* Booking Modal */}
+      {showBookingModal && selectedSlot && (
+        <BookingModal
+          slot={selectedSlot}
+          onClose={() => {
+            setShowBookingModal(false);
+            setSelectedSlot(null);
+          }}
+          onConfirm={handleBookingConfirm}
+        />
+      )}
+    </div>
+  );
+}

@@ -1,16 +1,16 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import Dashboard from './pages/Dashboard';
-import MyReservations from './pages/MyReservations';
-import ProfileEdit from './pages/ProfileEdit';
-import ProtectedRoute from './components/ProtectedRoute';
-import AdminRoute from './components/AdminRoute';
-import AdminLayout from './layouts/AdminLayout';
-import AdminDashboard from './pages/admin/AdminDashboard';
-import InventoryManagement from './pages/admin/InventoryManagement';
-import RegisteredUsers from './pages/admin/RegisteredUsers';
+import Login from './features/auth/pages/Login';
+import Register from './features/auth/pages/Register';
+import Dashboard from './features/customer/pages/Dashboard';
+import MyReservations from './features/reservations/pages/MyReservations';
+import ProfileEdit from './features/profile/pages/ProfileEdit';
+import ProtectedRoute from './shared/components/ProtectedRoute';
+import AdminRoute from './shared/components/AdminRoute';
+import AdminLayout from './features/admin/layouts/AdminLayout';
+import AdminDashboard from './features/admin/pages/AdminDashboard';
+import InventoryManagement from './features/admin/pages/InventoryManagement';
+import RegisteredUsers from './features/admin/pages/RegisteredUsers';
 import './App.css';
 
 function App() {
