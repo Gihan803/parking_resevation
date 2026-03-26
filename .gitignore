@@ -22,7 +22,6 @@ frontend/yarn-debug.log*
 frontend/yarn-error.log*
 
 # IDE
-.vscode/
 .idea/
 *.swp
 *.swo
@@ -37,3 +36,5 @@ Thumbs.db
 # Misc
 .env.example
 *.bak
+config.bat
+node_modules
