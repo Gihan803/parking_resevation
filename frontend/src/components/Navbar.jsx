@@ -38,6 +38,14 @@ export default function Navbar({ user, onLogout }) {
 
           {/* Desktop Navigation Links */}
           <div className="hidden md:flex items-center space-x-4">
+            {user?.role === 'admin' && (
+              <Link
+                to="/admin"
+                className={`px-3 py-2 rounded-md text-sm font-medium hover:bg-teal-600 transition-colors ${isActive('/admin')}`}
+              >
+                Admin
+              </Link>
+            )}
             <Link
               to="/dashboard"
               className={`px-3 py-2 rounded-md text-sm font-medium hover:bg-teal-600 transition-colors ${isActive('/dashboard')}`}
@@ -98,6 +106,15 @@ export default function Navbar({ user, onLogout }) {
           <div className="md:hidden pb-4">
             {/* Mobile Navigation Links */}
             <div className="flex flex-col space-y-2">
+              {user?.role === 'admin' && (
+                <Link
+                  to="/admin"
+                  onClick={closeMenu}
+                  className={`px-3 py-2 rounded-md text-sm font-medium hover:bg-teal-600 transition-colors ${isActive('/admin')}`}
+                >
+                  Admin
+                </Link>
+              )}
               <Link
                 to="/dashboard"
                 onClick={closeMenu}

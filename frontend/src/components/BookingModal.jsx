@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { API_BASE_URL } from '../utils/api';
 
 export default function BookingModal({ slot, onClose, onConfirm }) {
   const [licensePlate, setLicensePlate] = useState('');
@@ -28,7 +29,7 @@ export default function BookingModal({ slot, onClose, onConfirm }) {
 
     try {
       const token = localStorage.getItem('auth_token');
-      const response = await fetch('http://localhost:8000/api/reservations', {
+      const response = await fetch(`${API_BASE_URL}/reservations`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

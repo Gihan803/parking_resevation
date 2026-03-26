@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import ParkingSlot from './ParkingSlot';
-import BookingModal from './BookingModal';
-import Navbar from './Navbar';
+import ParkingSlot from '../components/ParkingSlot';
+import BookingModal from '../components/BookingModal';
+import Navbar from '../components/Navbar';
+import { parkingSlotApi } from '../utils/api';
 
 // Initialize user synchronously from localStorage
 const getInitialUser = () => {
@@ -32,31 +33,24 @@ export default function Dashboard() {
   const fetchSlots = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('auth_token');
-      
-      // Fetch slots from backend API
-      const response = await fetch('http://localhost:8000/api/slots', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch slots');
-      }
-
-      const data = await response.json();
+      setError(null);
+      const slotData = await parkingSlotApi.fetchAll();
       
       // Use real data from backend, fallback to mock if needed
-      const slotData = data.slots || Array.from({ length: 18 }, (_, i) => ({
-        id: i + 1,
-        slot_number: String(i + 1).padStart(2, '0'),
-        status: i % 3 === 0 ? 'occupied' : 'available',
-      }));
-      
-      setSlots(slotData);
+      if (Array.isArray(slotData) && slotData.length > 0) {
+        setSlots(slotData);
+      } else {
+        setSlots(
+          Array.from({ length: 18 }, (_, i) => ({
+            id: i + 1,
+            slot_number: String(i + 1).padStart(2, '0'),
+            status: i % 3 === 0 ? 'occupied' : 'available',
+          })),
+        );
+      }
     } catch (err) {
       console.error('Error fetching slots:', err);
+      setError(err?.message || 'Failed to load slots');
       // Fallback to mock data on error
       const mockSlots = Array.from({ length: 18 }, (_, i) => ({
         id: i + 1,
@@ -77,9 +71,9 @@ export default function Dashboard() {
   const handleBookingConfirm = (reservation) => {
     // Immediately refresh slots to show the booked slot as occupied
     fetchSlots();
-    // Show success message after a short delay
+    // Send user to reservations after a short delay
     setTimeout(() => {
-      setActiveTab('reservations');
+      navigate('/my-reservations');
     }, 500);
   };
 

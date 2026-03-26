@@ -56,6 +56,7 @@ Route::post('/logout', [AuthController::class, 'logout']);
         
         // Slot Management
         Route::prefix('slots')->group(function () {
+            Route::get('/', [AdminController::class, 'getSlots']);
             Route::post('/', [AdminController::class, 'createSlot']);
             Route::put('/{id}', [AdminController::class, 'updateSlot']);
             Route::delete('/{id}', [AdminController::class, 'deleteSlot']);

@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Notification from './Notification';
-import ConfirmModal from './ConfirmModal';
-import ExpirationWarning from './ExpirationWarning';
-import Navbar from './Navbar';
-import ReservationCard from './ReservationCard';
+import Notification from '../components/Notification';
+import ConfirmModal from '../components/ConfirmModal';
+import ExpirationWarning from '../components/ExpirationWarning';
+import Navbar from '../components/Navbar';
+import ReservationCard from '../components/ReservationCard';
 import { useReservations } from '../hooks/useReservations';
 import { useCountdown } from '../hooks/useCountdown';
 import { useExpirationWarning } from '../hooks/useExpirationWarning';

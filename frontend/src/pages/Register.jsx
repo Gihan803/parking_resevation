@@ -1,16 +1,59 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { authApi } from '../utils/api';
 
 const Register = () => {
+  const navigate = useNavigate();
   const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [agree, setAgree] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // TODO: Add registration logic
+    setError('');
+
+    if (!agree) {
+      setError('Please accept the terms to continue.');
+      return;
+    }
+
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters.');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const data = await authApi.register({
+        full_name: name,
+        email,
+        password,
+        phone,
+      });
+
+      if (data?.access_token) {
+        localStorage.setItem('auth_token', data.access_token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        navigate('/dashboard');
+      } else {
+        navigate('/login');
+      }
+    } catch (err) {
+      setError(err?.message || 'Registration failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -41,6 +84,11 @@ const Register = () => {
           <p className="text-gray-600 mb-8">Start your journey toward stress-free parking today.</p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+                {error}
+              </div>
+            )}
             <div>
               <label className="block font-semibold text-sm mb-1">Full Name</label>
               <input
@@ -49,7 +97,21 @@ const Register = () => {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
-                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-teal-500"
+                disabled={loading}
+                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-teal-500 disabled:bg-gray-50"
+              />
+            </div>
+
+            <div>
+              <label className="block font-semibold text-sm mb-1">Phone Number</label>
+              <input
+                type="tel"
+                placeholder="+1 555-0100"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                required
+                disabled={loading}
+                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-teal-500 disabled:bg-gray-50"
               />
             </div>
 
@@ -61,7 +123,8 @@ const Register = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-teal-500"
+                disabled={loading}
+                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-teal-500 disabled:bg-gray-50"
               />
             </div>
 
@@ -74,7 +137,8 @@ const Register = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-teal-500"
+                  disabled={loading}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-teal-500 disabled:bg-gray-50"
                 />
                 <button
                   type="button"
@@ -90,12 +154,13 @@ const Register = () => {
               <label className="block font-semibold text-sm mb-1">Confirm Password</label>
               <input
                 type={showPassword ? 'text' : 'password'}
-                placeholder="Repeat your password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-teal-500"
-              />
+                  placeholder="Repeat your password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  disabled={loading}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-teal-500 disabled:bg-gray-50"
+                />
             </div>
 
             <div className="flex items-start gap-2 py-2">
@@ -104,6 +169,7 @@ const Register = () => {
                 checked={agree}
                 onChange={(e) => setAgree(e.target.checked)}
                 required
+                disabled={loading}
                 className="mt-1"
               />
               <label className="text-sm text-gray-600">
@@ -121,9 +187,10 @@ const Register = () => {
 
             <button
               type="submit"
-              className="w-full bg-teal-500 text-white font-semibold py-3 rounded-lg hover:bg-teal-600 transition mt-6 shadow-md"
+              disabled={loading}
+              className="w-full bg-teal-500 text-white font-semibold py-3 rounded-lg hover:bg-teal-600 transition mt-6 shadow-md disabled:bg-teal-300 disabled:cursor-not-allowed"
             >
-              Sign Up
+              {loading ? 'Creating account...' : 'Sign Up'}
             </button>
           </form>
 

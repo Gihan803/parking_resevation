@@ -1,6 +1,6 @@
 import { getAuthToken } from './helpers';
 
-const API_BASE_URL = 'http://localhost:8000/api';
+export const API_BASE_URL = import.meta?.env?.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
 /**
  * Make an authenticated API request
@@ -8,7 +8,7 @@ const API_BASE_URL = 'http://localhost:8000/api';
  * @param {object} options - Fetch options
  * @returns {Promise<object>} Response data
  */
-async function authenticatedFetch(endpoint, options = {}) {
+export async function authenticatedFetch(endpoint, options = {}) {
   const token = getAuthToken();
   
   const defaultOptions = {
@@ -36,6 +36,46 @@ async function authenticatedFetch(endpoint, options = {}) {
 
   return data;
 }
+
+export async function publicFetch(endpoint, options = {}) {
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+    ...options,
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    const firstError = data?.errors ? Object.values(data.errors)[0]?.[0] : null;
+    throw new Error(data?.message || firstError || `HTTP error! status: ${response.status}`);
+  }
+
+  return data;
+}
+
+/**
+ * Auth API methods
+ */
+export const authApi = {
+  async register(payload) {
+    return await publicFetch('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async me() {
+    const data = await authenticatedFetch('/auth/me');
+    return data.user;
+  },
+
+  async logout() {
+    return await authenticatedFetch('/auth/logout', { method: 'POST' });
+  },
+};
 
 /**
  * Reservation API methods
@@ -141,7 +181,7 @@ export const parkingSlotApi = {
    */
   async fetchAvailable() {
     const data = await authenticatedFetch('/slots/available');
-    return data.slots || [];
+    return data.available_slots || data.slots || [];
   },
 
   /**
@@ -154,8 +194,47 @@ export const parkingSlotApi = {
   },
 };
 
+/**
+ * Admin API methods
+ */
+export const adminApi = {
+  async getDashboardStats() {
+    return await authenticatedFetch('/admin/dashboard/stats');
+  },
+
+  async getSlots() {
+    return await authenticatedFetch('/admin/slots');
+  },
+
+  async createSlot(slotNumber) {
+    return await authenticatedFetch('/admin/slots', {
+      method: 'POST',
+      body: JSON.stringify({ slot_number: slotNumber }),
+    });
+  },
+
+  async deleteSlot(slotId) {
+    return await authenticatedFetch(`/admin/slots/${slotId}`, {
+      method: 'DELETE',
+    });
+  },
+
+  async getUsers() {
+    return await authenticatedFetch('/admin/users');
+  },
+
+  async updateUser(userId, payload) {
+    return await authenticatedFetch(`/admin/users/${userId}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+  },
+};
+
 export default {
+  authApi,
   reservationApi,
   profileApi,
   parkingSlotApi,
+  adminApi,
 };

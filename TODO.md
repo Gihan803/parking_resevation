@@ -1,39 +1,15 @@
-# Task: Implement User Profile Edit on Navbar Name Click
+# Task: User Profile Edit Flow
 
-## Steps to Complete:
+## Status: Complete
 
-### 1. Backend Updates ✅ [COMPLETE]
+- [x] Backend: `updateProfile` implemented in `backend/app/Http/Controllers/Api/AuthController.php`
+- [x] Backend: route added in `backend/routes/api.php` (`PUT /api/auth/profile` under `auth:sanctum`)
+- [x] Frontend: `profileApi.updateProfile` added in `frontend/src/utils/api.js`
+- [x] Frontend: `/profile` route wired in `frontend/src/App.jsx`
+- [x] Frontend: profile page implemented in `frontend/src/pages/ProfileEdit.jsx`
+- [x] Frontend: navigation includes Profile link in `frontend/src/components/Navbar.jsx`
 
-- [ ] Add `updateProfile` method to `backend/app/Http/Controllers/Api/AuthController.php`
-  - Validate: full_name (req), phone (opt), current_password (opt req if new_password), new_password/confirm_password (min6 match if provided)
-  - Update user, hash new pw if provided, return updated user
-- [ ] Add route `Route::put('/auth/profile', [AuthController::class, 'updateProfile']);` in protected auth group `backend/routes/api.php`
+## Next cleanup ideas (optional)
 
-### 2. Frontend API Update ✅ [PENDING]
-
-- [ ] Add `profileApi = { updateProfile: async (data) => authenticatedFetch('/auth/profile', { method: 'PUT', body: JSON.stringify(data) }) }` to `frontend/src/utils/api.js`
-
-### 3. Frontend Routing ✅ [PENDING]
-
-- [ ] Add `<Route path="/profile" element={<ProtectedRoute><ProfileEdit /></ProtectedRoute>} />` before catch-all in `frontend/src/App.jsx`
-
-### 4. Navbar Update ✅ [PENDING]
-
-- [ ] Add `onClick={() => navigate('/profile')}` to user name button in `frontend/src/components/Navbar.jsx`
-
-### 5. Create Profile Component ✅ [PENDING]
-
-- [ ] Create `frontend/src/components/ProfileEdit.jsx`
-  - Load user from localStorage
-  - Form: full_name, phone, password section (current_password, new_password, confirm_password)
-  - Submit via profileApi.updateProfile
-  - Success: update localStorage, show notification, option back to dashboard
-  - Use Tailwind styles matching Login/Register
-
-### 6. Testing & Polish
-
-- [ ] Test backend endpoint
-- [ ] Test full flow: login → click name → /profile → edit → save → Navbar updates
-- [ ] Mark all complete, attempt_completion
-
-Current Progress: Planning complete. Ready for implementation.
+- [ ] Move hardcoded API URLs to env (e.g. `VITE_API_BASE_URL`) and reuse `frontend/src/utils/api.js` everywhere
+- [ ] Continue splitting page-level components into `frontend/src/pages/*` and reusable UI into `frontend/src/components/*`
