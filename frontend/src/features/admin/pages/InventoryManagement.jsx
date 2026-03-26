@@ -28,21 +28,30 @@ export default function InventoryManagement() {
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
 
-  const fetchSlots = async () => {
+  const fetchSlots = async (opts = { silent: false }) => {
     try {
-      setLoading(true);
+      if (!opts.silent) setLoading(true);
       setError('');
       const res = await adminApi.getSlots();
       setSlots(res.slots || []);
     } catch (e) {
       setError(e?.message || 'Failed to load slots');
     } finally {
-      setLoading(false);
+      if (!opts.silent) setLoading(false);
     }
   };
 
   useEffect(() => {
+    let mounted = true;
     fetchSlots();
+    const interval = setInterval(() => {
+      if (!mounted) return;
+      fetchSlots({ silent: true });
+    }, 15000);
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
   }, []);
 
   const handleOpenAdd = () => {
@@ -100,13 +109,22 @@ export default function InventoryManagement() {
           <h1 className="text-4xl font-black text-slate-900">Inventory Management</h1>
           <p className="mt-2 text-slate-500">Create, view, and remove parking slots.</p>
         </div>
-        <button
-          type="button"
-          onClick={handleOpenAdd}
-          className="inline-flex items-center gap-2 rounded-full bg-teal-600 px-5 py-3 text-white font-bold shadow-sm hover:bg-teal-700"
-        >
-          <span className="text-xl leading-none">+</span> Add New Slot
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => fetchSlots()}
+            className="rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50"
+          >
+            Refresh
+          </button>
+          <button
+            type="button"
+            onClick={handleOpenAdd}
+            className="inline-flex items-center gap-2 rounded-full bg-teal-600 px-5 py-3 text-white font-bold shadow-sm hover:bg-teal-700"
+          >
+            <span className="text-xl leading-none">+</span> Add New Slot
+          </button>
+        </div>
       </div>
 
       {error ? <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-700">{error}</div> : null}
@@ -165,9 +183,13 @@ export default function InventoryManagement() {
                       <td className="py-4 pr-4">
                         {res ? (
                           <div className="space-y-1">
-                            <div className="font-bold text-slate-900">{res.elapsed_duration || res.planned_duration}</div>
+                            <div className="font-bold text-slate-900">
+                              {res.has_started ? (res.elapsed_duration || res.planned_duration) : res.planned_duration}
+                            </div>
                             <div className="text-xs text-slate-500">
-                              Since {res.start_time ? String(res.start_time).slice(0, 5) : '—'}
+                              {res.has_started
+                                ? `Since ${res.since_time || String(res.start_time || '').slice(0, 5)}`
+                                : `Starts ${res.since_time || String(res.start_time || '').slice(0, 5)}`}
                             </div>
                           </div>
                         ) : (
